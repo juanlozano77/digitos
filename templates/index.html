@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reconocedor de Dígitos</title>
+    
+    <!-- Importamos una fuente atractiva de Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        /* --- Paleta de Colores Celeste y Estilos Base --- */
+        :root {
+            --bg-color: #f0f7ff;
+            --primary-color: #87CEEB;
+            --secondary-color: #b0e0e6;
+            --accent-color: #4682B4;
+            --text-color: #1f2937;
+            --card-bg: #ffffff;
+            --shadow-color: rgba(70, 130, 180, 0.2);
+            --error-color: #e57373;
+        }
+
+        /* --- Reseteo y Estilos Globales --- */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 1rem;
+        }
+
+        /* --- Contenedor Principal de la App --- */
+        .app-container {
+            width: 100%;
+            max-width: 400px;
+            background-color: var(--card-bg);
+            border-radius: 20px;
+            padding: 2rem;
+            box-shadow: 0 10px 30px var(--shadow-color);
+            text-align: center;
+            border: 1px solid var(--secondary-color);
+        }
+
+        /* --- Título --- */
+        h1 {
+            color: var(--accent-color);
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+
+        p {
+            margin-bottom: 1.5rem;
+            color: #6b7280;
+            font-weight: 300;
+        }
+
+        /* --- Canvas de Dibujo --- */
+        #drawing-canvas {
+            background-color: #000;
+            border-radius: 12px;
+            cursor: crosshair;
+            touch-action: none;
+            border: 4px solid var(--secondary-color);
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.5);
+            width: 100%;
+            height: auto;
+            aspect-ratio: 1/1;
+        }
+
+        /* --- Grupo de Botones --- */
+        .button-group {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        /* --- Estilos de Botones --- */
+        .btn {
+            flex-grow: 1;
+            padding: 0.8rem 1rem;
+            border: none;
+            border-radius: 10px;
+            font-family: 'Poppins', sans-serif;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease-in-out;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn-predict {
+            background-color: var(--accent-color);
+            color: white;
+        }
+        .btn-predict:hover {
+            background-color: #5a9ac6;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px var(--shadow-color);
+        }
+        .btn-clear {
+            background-color: var(--secondary-color);
+            color: var(--accent-color);
+        }
+        .btn-clear:hover {
+            background-color: #c1e8ef;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px var(--shadow-color);
+        }
+        
+        /* --- Área de Resultado --- */
+        #result-container {
+            background-color: var(--bg-color);
+            border-radius: 12px;
+            padding: 1rem;
+            margin-top: 1rem;
+            min-height: 150px; /* Aumentamos un poco la altura */
+            display: flex;
+            flex-direction: column; /* Cambiamos a columna */
+            justify-content: center;
+            align-items: center;
+            border: 2px dashed var(--primary-color);
+            transition: border-color 0.3s ease;
+        }
+        #result-container.error { border-color: var(--error-color); }
+
+        #result-text {
+            font-size: 3.5rem;
+            font-weight: 700;
+            color: var(--accent-color);
+            animation: pop-in 0.5s cubic-bezier(0.68, -0.55, 0.27, 1.55);
+        }
+        
+        /* --- Estilo para la imagen procesada --- */
+        #processed-image-preview {
+            width: 112px; /* 28px * 4 para mejor visibilidad */
+            height: 112px;
+            border: 2px solid var(--secondary-color);
+            border-radius: 8px;
+            /* Muestra los píxeles nítidos, sin difuminar */
+            image-rendering: pixelated; 
+            background-color: #000;
+        }
+        
+        @keyframes pop-in {
+            0% { transform: scale(0.5); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        
+        /* --- Estado de Carga (Spinner) --- */
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid var(--secondary-color);
+            border-top-color: var(--accent-color);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+
+    <div class="app-container">
+        <h1>Digit-AI</h1>
+        <p>Dibuja un número y presiona "Reconocer".</p>
+
+        <canvas id="drawing-canvas" width="280" height="280"></canvas>
+
+        <div class="button-group">
+            <button id="clear-btn" class="btn btn-clear">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"/><path fill-rule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z"/></svg>
+                Borrar
+            </button>
+            <button id="predict-btn" class="btn btn-predict">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M8 0a1.5 1.5 0 0 1 1.5 1.5V3h-3V1.5A1.5 1.5 0 0 1 8 0zM6.5 3a.5.5 0 0 0 0 1h3a.5.5 0 0 0 0-1h-3z"/><path d="M8.293 6.793A1 1 0 0 0 6.5 6.207V5.5a.5.5 0 0 0-1 0v.707A1 1 0 0 0 6.207 7.5l.293.293a1 1 0 0 1 .293.707V12.5a.5.5 0 0 0 1 0V8.5a1 1 0 0 1 .293-.707l.293-.293A1 1 0 0 0 9.5 6.793V5.5a.5.5 0 0 0-1 0v.793z"/></svg>
+                Reconocer
+            </button>
+        </div>
+
+        <div id="result-container">
+            <!-- El resultado con la imagen se insertará aquí -->
+        </div>
+    </div>
+
+    <script>
+        window.addEventListener('load', () => {
+            const canvas = document.getElementById('drawing-canvas');
+            const context = canvas.getContext('2d');
+            const predictBtn = document.getElementById('predict-btn');
+            const clearBtn = document.getElementById('clear-btn');
+            const resultContainer = document.getElementById('result-container');
+            let isDrawing = false, lastX = 0, lastY = 0, hasDrawn = false;
+
+            function initializeCanvas() {
+                context.fillStyle = "black";
+                context.fillRect(0, 0, canvas.width, canvas.height);
+                context.strokeStyle = 'white';
+                context.lineWidth = 20;
+                context.lineJoin = 'round';
+                context.lineCap = 'round';
+                resultContainer.innerHTML = '<span style="color: #6b7280; font-weight:300;">Esperando tu dibujo...</span>';
+                resultContainer.classList.remove('error');
+                hasDrawn = false;
+            }
+            initializeCanvas();
+
+            function startDrawing(e) {
+                isDrawing = true; hasDrawn = true;
+                [lastX, lastY] = getCoords(e);
+            }
+            function draw(e) {
+                if (!isDrawing) return;
+                const [x, y] = getCoords(e);
+                context.beginPath();
+                context.moveTo(lastX, lastY);
+                context.lineTo(x, y);
+                context.stroke();
+                [lastX, lastY] = [x, y];
+            }
+            function stopDrawing() { isDrawing = false; }
+            function getCoords(e) {
+                if (e.touches) e.preventDefault();
+                const rect = canvas.getBoundingClientRect();
+                const scaleX = canvas.width / rect.width;
+                const scaleY = canvas.height / rect.height;
+                const x = ((e.clientX || e.touches[0].clientX) - rect.left) * scaleX;
+                const y = ((e.clientY || e.touches[0].clientY) - rect.top) * scaleY;
+                return [x, y];
+            }
+
+            canvas.addEventListener('mousedown', startDrawing);
+            canvas.addEventListener('mousemove', draw);
+            canvas.addEventListener('mouseup', stopDrawing);
+            canvas.addEventListener('mouseout', stopDrawing);
+            canvas.addEventListener('touchstart', startDrawing);
+            canvas.addEventListener('touchmove', draw);
+            canvas.addEventListener('touchend', stopDrawing);
+            clearBtn.addEventListener('click', initializeCanvas);
+            predictBtn.addEventListener('click', predictDigit);
+
+            // *** FUNCIÓN DE PREDICCIÓN CONECTADA AL BACKEND (ACTUALIZADA) ***
+            async function predictDigit() {
+                if (!hasDrawn) {
+                    resultContainer.innerHTML = '<span style="color: var(--accent-color);">Dibuja un número primero.</span>';
+                    return;
+                }
+                resultContainer.innerHTML = '<div class="spinner"></div>';
+                resultContainer.classList.remove('error');
+                const imageDataURL = canvas.toDataURL('image/png');
+
+                try {
+                    const response = await fetch('/predict', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ image: imageDataURL }),
+                    });
+                    if (!response.ok) throw new Error(`Error del servidor: ${response.status}`);
+                    
+                    const data = await response.json();
+                    if (data.prediction !== undefined && data.image_processed !== undefined) {
+                        const prediction = data.prediction;
+                        const imageB64 = data.image_processed;
+
+                        // Construir el nuevo HTML del resultado
+                        resultContainer.innerHTML = `
+                            <div>
+                                <span id="result-text">${prediction}</span>
+                                <p style="margin-top: 1rem; margin-bottom: 0.5rem; font-size: 0.9rem; color: #6b7280;">Imagen reconocida por el modelo:</p>
+                                <img src="${imageB64}" id="processed-image-preview" alt="Imagen procesada de 28x28">
+                            </div>
+                        `;
+                    } else {
+                        throw new Error(data.error || 'Respuesta inesperada del servidor.');
+                    }
+                } catch (error) {
+                    console.error("Error al reconocer:", error);
+                    resultContainer.innerHTML = '<span style="font-weight: 400; color: var(--error-color);">¡Ups! Hubo un error.</span>';
+                    resultContainer.classList.add('error');
+                }
+            }
+        });
+    </script>
+</body>
+</html>
