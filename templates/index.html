@@ -13,18 +13,22 @@
     <style>
         /* --- Paleta de Colores Celeste y Estilos Base --- */
         :root {
-            --bg-color: #f0f7ff;
-            --primary-color: #87CEEB;
-            --secondary-color: #b0e0e6;
-            --accent-color: #4682B4;
-            --text-color: #1f2937;
+            --bg-color: #f0f7ff; /* Un azul muy claro, casi blanco */
+            --primary-color: #87CEEB; /* Azul cielo */
+            --secondary-color: #b0e0e6; /* Azul pálido */
+            --accent-color: #4682B4; /* Azul acero */
+            --text-color: #1f2937; /* Un gris oscuro azulado */
             --card-bg: #ffffff;
             --shadow-color: rgba(70, 130, 180, 0.2);
             --error-color: #e57373;
         }
 
         /* --- Reseteo y Estilos Globales --- */
-        * { margin: 0; padding: 0; box-sizing: border-box; }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
         body {
             font-family: 'Poppins', sans-serif;
@@ -40,7 +44,7 @@
         /* --- Contenedor Principal de la App --- */
         .app-container {
             width: 100%;
-            max-width: 400px;
+            max-width: 400px; /* Ancho máximo ideal para vista móvil */
             background-color: var(--card-bg);
             border-radius: 20px;
             padding: 2rem;
@@ -67,12 +71,12 @@
             background-color: #000;
             border-radius: 12px;
             cursor: crosshair;
-            touch-action: none;
+            touch-action: none; /* Mejora la experiencia en móviles */
             border: 4px solid var(--secondary-color);
             box-shadow: inset 0 0 10px rgba(0,0,0,0.5);
-            width: 100%;
+            width: 100%; /* Hacemos el canvas responsivo */
             height: auto;
-            aspect-ratio: 1/1;
+            aspect-ratio: 1/1; /* Mantiene la proporción cuadrada */
         }
 
         /* --- Grupo de Botones --- */
@@ -104,15 +108,18 @@
             background-color: var(--accent-color);
             color: white;
         }
+
         .btn-predict:hover {
             background-color: #5a9ac6;
             transform: translateY(-2px);
             box-shadow: 0 6px 15px var(--shadow-color);
         }
+
         .btn-clear {
             background-color: var(--secondary-color);
             color: var(--accent-color);
         }
+
         .btn-clear:hover {
             background-color: #c1e8ef;
             transform: translateY(-2px);
@@ -123,34 +130,25 @@
         #result-container {
             background-color: var(--bg-color);
             border-radius: 12px;
-            padding: 1rem;
+            padding: 1.5rem;
             margin-top: 1rem;
-            min-height: 150px; /* Aumentamos un poco la altura */
+            min-height: 120px;
             display: flex;
-            flex-direction: column; /* Cambiamos a columna */
             justify-content: center;
             align-items: center;
             border: 2px dashed var(--primary-color);
             transition: border-color 0.3s ease;
         }
-        #result-container.error { border-color: var(--error-color); }
+        
+        #result-container.error {
+            border-color: var(--error-color);
+        }
 
         #result-text {
             font-size: 3.5rem;
             font-weight: 700;
             color: var(--accent-color);
             animation: pop-in 0.5s cubic-bezier(0.68, -0.55, 0.27, 1.55);
-        }
-        
-        /* --- Estilo para la imagen procesada --- */
-        #processed-image-preview {
-            width: 112px; /* 28px * 4 para mejor visibilidad */
-            height: 112px;
-            border: 2px solid var(--secondary-color);
-            border-radius: 8px;
-            /* Muestra los píxeles nítidos, sin difuminar */
-            image-rendering: pixelated; 
-            background-color: #000;
         }
         
         @keyframes pop-in {
@@ -167,14 +165,17 @@
             border-radius: 50%;
             animation: spin 1s linear infinite;
         }
-        @keyframes spin { to { transform: rotate(360deg); } }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
     </style>
 </head>
 <body>
 
     <div class="app-container">
         <h1>Digit-AI</h1>
-        <p>Dibuja un número y presiona "Reconocer".</p>
+        <p>Dibuja un número en el recuadro negro y presiona "Predecir".</p>
 
         <canvas id="drawing-canvas" width="280" height="280"></canvas>
 
@@ -185,23 +186,28 @@
             </button>
             <button id="predict-btn" class="btn btn-predict">
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M8 0a1.5 1.5 0 0 1 1.5 1.5V3h-3V1.5A1.5 1.5 0 0 1 8 0zM6.5 3a.5.5 0 0 0 0 1h3a.5.5 0 0 0 0-1h-3z"/><path d="M8.293 6.793A1 1 0 0 0 6.5 6.207V5.5a.5.5 0 0 0-1 0v.707A1 1 0 0 0 6.207 7.5l.293.293a1 1 0 0 1 .293.707V12.5a.5.5 0 0 0 1 0V8.5a1 1 0 0 1 .293-.707l.293-.293A1 1 0 0 0 9.5 6.793V5.5a.5.5 0 0 0-1 0v.793z"/></svg>
-                Reconocer
+                Predecir
             </button>
         </div>
 
         <div id="result-container">
-            <!-- El resultado con la imagen se insertará aquí -->
+            <!-- El resultado se insertará aquí con JavaScript -->
         </div>
     </div>
 
     <script>
         window.addEventListener('load', () => {
+
             const canvas = document.getElementById('drawing-canvas');
             const context = canvas.getContext('2d');
             const predictBtn = document.getElementById('predict-btn');
             const clearBtn = document.getElementById('clear-btn');
             const resultContainer = document.getElementById('result-container');
-            let isDrawing = false, lastX = 0, lastY = 0, hasDrawn = false;
+
+            let isDrawing = false;
+            let lastX = 0;
+            let lastY = 0;
+            let hasDrawn = false; // Bandera para saber si se ha dibujado algo
 
             function initializeCanvas() {
                 context.fillStyle = "black";
@@ -214,12 +220,16 @@
                 resultContainer.classList.remove('error');
                 hasDrawn = false;
             }
+            
             initializeCanvas();
 
             function startDrawing(e) {
-                isDrawing = true; hasDrawn = true;
-                [lastX, lastY] = getCoords(e);
+                isDrawing = true;
+                hasDrawn = true;
+                const [x, y] = getCoords(e);
+                [lastX, lastY] = [x, y];
             }
+
             function draw(e) {
                 if (!isDrawing) return;
                 const [x, y] = getCoords(e);
@@ -229,14 +239,16 @@
                 context.stroke();
                 [lastX, lastY] = [x, y];
             }
+            
             function stopDrawing() { isDrawing = false; }
+
             function getCoords(e) {
                 if (e.touches) e.preventDefault();
                 const rect = canvas.getBoundingClientRect();
                 const scaleX = canvas.width / rect.width;
                 const scaleY = canvas.height / rect.height;
-                const x = ((e.clientX || e.touches[0].clientX) - rect.left) * scaleX;
-                const y = ((e.clientY || e.touches[0].clientY) - rect.top) * scaleY;
+                const x = ( (e.clientX || e.touches[0].clientX) - rect.left ) * scaleX;
+                const y = ( (e.clientY || e.touches[0].clientY) - rect.top ) * scaleY;
                 return [x, y];
             }
 
@@ -247,45 +259,49 @@
             canvas.addEventListener('touchstart', startDrawing);
             canvas.addEventListener('touchmove', draw);
             canvas.addEventListener('touchend', stopDrawing);
+
             clearBtn.addEventListener('click', initializeCanvas);
             predictBtn.addEventListener('click', predictDigit);
 
-            // *** FUNCIÓN DE PREDICCIÓN CONECTADA AL BACKEND (ACTUALIZADA) ***
+            // *** FUNCIÓN DE PREDICCIÓN CONECTADA AL BACKEND ***
             async function predictDigit() {
                 if (!hasDrawn) {
                     resultContainer.innerHTML = '<span style="color: var(--accent-color);">Dibuja un número primero.</span>';
                     return;
                 }
+
                 resultContainer.innerHTML = '<div class="spinner"></div>';
                 resultContainer.classList.remove('error');
+                
+                // Convertir el contenido del canvas a una imagen en formato base64
                 const imageDataURL = canvas.toDataURL('image/png');
 
                 try {
+                    // Enviar la imagen al backend de Flask usando fetch
                     const response = await fetch('/predict', {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ image: imageDataURL }),
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ image: imageDataURL }), 
                     });
-                    if (!response.ok) throw new Error(`Error del servidor: ${response.status}`);
-                    
-                    const data = await response.json();
-                    if (data.prediction !== undefined && data.image_processed !== undefined) {
-                        const prediction = data.prediction;
-                        const imageB64 = data.image_processed;
 
-                        // Construir el nuevo HTML del resultado
-                        resultContainer.innerHTML = `
-                            <div>
-                                <span id="result-text">${prediction}</span>
-                                <p style="margin-top: 1rem; margin-bottom: 0.5rem; font-size: 0.9rem; color: #6b7280;">Imagen reconocida por el modelo:</p>
-                                <img src="${imageB64}" id="processed-image-preview" alt="Imagen procesada de 28x28">
-                            </div>
-                        `;
+                    if (!response.ok) {
+                        throw new Error(`Error del servidor: ${response.status}`);
+                    }
+
+                    // Obtener la predicción del JSON de respuesta
+                    const data = await response.json();
+                    
+                    if (data.prediction !== undefined) {
+                        const prediction = data.prediction;
+                        resultContainer.innerHTML = `<span id="result-text">${prediction}</span>`;
                     } else {
                         throw new Error(data.error || 'Respuesta inesperada del servidor.');
                     }
+
                 } catch (error) {
-                    console.error("Error al reconocer:", error);
+                    console.error("Error al predecir:", error);
                     resultContainer.innerHTML = '<span style="font-weight: 400; color: var(--error-color);">¡Ups! Hubo un error.</span>';
                     resultContainer.classList.add('error');
                 }
