@@ -28,56 +28,60 @@ except Exception as e:
     print(f"Error: {e}")
     exit()
 
-# -----------------------------------------------------------------------------
-# --- 3. NUEVAS FUNCIONES DE PREPROCESAMIENTO DE IMAGEN (LAS QUE PROPORCIONASTE) ---
-# -----------------------------------------------------------------------------
+
+
+
+
+
+
+
+
+
+
+from PIL import Image
+import numpy as np
+
+from PIL import Image
+import numpy as np
 
 def center_digit(img):
     """
-    Centra el dígito en una imagen 28x28 manteniendo su proporción,
-    imitando el preprocesamiento de MNIST.
+    Centra un dígito en una imagen 28x28, redimensionando a 20x20 y centrando.
     """
-    arr = np.array(img)
 
-    # El dibujo viene en negro sobre transparente (o blanco).
-    # Necesitamos encontrar los píxeles que no son completamente negros.
-    # El canal Alfa (A) en RGBA nos dice la opacidad. Si es > 0, es parte del trazo.
-    # Si la imagen no tiene alfa, usamos la luminosidad.
-    if arr.shape[2] == 4: # RGBA
-        coords = np.column_stack(np.where(arr[:, :, 3] > 0))
-    else: # RGB o L
-        # Convertimos a escala de grises para estar seguros
-        img_gris = img.convert('L')
-        arr_gris = np.array(img_gris)
-        coords = np.column_stack(np.where(arr_gris > 0))
+    # Convertir siempre a escala de grises
+    img_gris = img.convert('L')
+    arr = np.array(img_gris)
+    
+    # Invertir: fondo negro, trazo blanco
+    arr_inv = 255 - arr
+    
+    # Buscar coordenadas donde hay "trazo"
+    coords = np.column_stack(np.where(arr_inv < 200))  # umbral configurable
 
     if coords.size == 0:
-        # Si no hay nada dibujado, devolvemos una imagen en negro
         return Image.new('L', (28, 28), color=0)
 
     y_min, x_min = coords.min(axis=0)
     y_max, x_max = coords.max(axis=0)
 
-    # Recortar la imagen al bounding box del dígito
-    # Usamos la imagen original para mantener la información de color/alfa
-    crop = img.crop((x_min, y_min, x_max + 1, y_max + 1))
-    
-    # Convertir a escala de grises y luego invertir colores (trazo blanco sobre fondo negro)
-    crop = crop.convert('L')
-    
-    # Redimensionar manteniendo la proporción para que quepa en un cuadro de 20x20
-    h, w = crop.size
+    # Recortar y redimensionar
+    crop = arr_inv[y_min:y_max+1, x_min:x_max+1]
+    crop = 255 - crop
+    h, w = crop.shape
     scale = 20.0 / max(h, w)
     new_w, new_h = int(w * scale), int(h * scale)
     
-    crop_img = crop.resize((new_w, new_h), Image.Resampling.LANCZOS)
+    # Convertir a imagen y redimensionar
+    crop_img = Image.fromarray(crop).resize((new_w, new_h), Image.Resampling.LANCZOS)
 
-    # Crear un lienzo negro de 28x28 y pegar el dígito centrado
-    centered = Image.new('L', (28, 28), color=0)
+    # Pegar en una imagen 28x28 centrada
+    final = Image.new('L', (28, 28), color=0)
     offset = ((28 - new_w) // 2, (28 - new_h) // 2)
-    centered.paste(crop_img, offset)
+    final.paste(crop_img, offset)
 
-    return centered
+    return final
+
 
 def preprocesar_imagen_final(img_data):
     """
@@ -154,4 +158,4 @@ def predict():
 # --- 5. PUNTO DE ENTRADA PRINCIPAL -------------------------------------------
 # -----------------------------------------------------------------------------
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    app.run(host='0.0.0.0', port=5000, debug=True) 
